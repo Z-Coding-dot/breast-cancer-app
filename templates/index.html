@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Breast Cancer Prediction</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f2f2f2; padding: 40px; }
+    h2 { text-align: center; color: #2c3e50; }
+    .container { max-width: 750px; margin: auto; }
+    .controls, .metrics, .prediction, .download { background: #fff; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #3498db; }
+    form { background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    label { display: block; margin-top: 15px; font-weight: bold; color: #34495e; }
+    input[type="number"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; }
+    input[type="submit"] { background-color: #3498db; color: white; padding: 12px; border: none; margin-top: 20px; width: 100%; font-size: 16px; cursor: pointer; border-radius: 5px; }
+    input[type="submit"]:hover { background-color: #2980b9; }
+    ul { list-style: none; padding-left: 0; }
+    ul li { padding: 5px 0; }
+    a { color: #27ae60; text-decoration: none; font-weight: bold; }
+    a:hover { text-decoration: underline; }
+  </style>
+
+  <script>
+    const examples = {
+      example1: [17.99,10.38,122.8,1001.0,0.1184,0.2776,0.3001,0.1471,0.2419,0.07871,1.095,0.9053,8.589,153.4,0.006399,0.04904,0.05373,0.01587,0.03003,0.006193,25.38,17.33,184.6,2019.0,0.1622,0.6656,0.7119,0.2654,0.4601,0.1189],
+      example2: [13.54,14.36,87.46,566.3,0.09779,0.08129,0.06664,0.04781,0.1885,0.05766,0.2699,0.7886,2.058,23.56,0.008462,0.0146,0.02387,0.01315,0.0198,0.0023,15.11,19.26,99.7,711.2,0.144,0.1773,0.239,0.1288,0.2977,0.07259]
+    };
+    function fillExample(key) {
+      const vals = examples[key];
+      document.querySelectorAll('input[name]').forEach((inp, idx) => inp.value = vals[idx] || '');
+    }
+    window.onload = () => fillExample('example1');
+  </script>
+</head>
+<body>
+  <h2>Breast Cancer Diagnosis Predictor</h2>
+
+  <div class="container controls">
+    <label for="exampleSelect"><strong>Choose Example:</strong></label>
+    <select id="exampleSelect" onchange="fillExample(this.value)">
+      <option value="example1">Example 1 (Malignant)</option>
+      <option value="example2">Example 2 (Benign)</option>
+    </select>
+  </div>
+
+  <div class="container">
+    <form action="/predict" method="post">
+      {% set features = [
+        'mean radius','mean texture','mean perimeter','mean area','mean smoothness',
+        'mean compactness','mean concavity','mean concave points','mean symmetry','mean fractal dimension',
+        'radius error','texture error','perimeter error','area error','smoothness error',
+        'compactness error','concavity error','concave points error','symmetry error','fractal dimension error',
+        'worst radius','worst texture','worst perimeter','worst area','worst smoothness',
+        'worst compactness','worst concavity','worst concave points','worst symmetry','worst fractal dimension'
+      ] %}
+      {% for i in range(30) %}
+        <label>{{ features[i] }}:</label>
+        <input type="number" name="{{ i }}" step="any" required>
+      {% endfor %}
+      <input type="submit" value="Predict">
+    </form>
+  </div>
+
+  <div class="container metrics">
+    <h3>Model Evaluation Metrics:</h3>
+    <ul>
+      <li>Accuracy: {{ metrics.accuracy|round(3) }}</li>
+      <li>Precision: {{ metrics.precision|round(3) }}</li>
+      <li>Recall: {{ metrics.recall|round(3) }}</li>
+      <li>F1 Score: {{ metrics.f1|round(3) }}</li>
+      <li>ROC-AUC: {{ metrics.roc_auc|round(3) }}</li>
+    </ul>
+  </div>
+
+  {% if prediction_text %}
+  <div class="container prediction">
+    <h3>{{ prediction_text }}</h3>
+  </div>
+  {% endif %}
+
+  {% if download_link %}
+  <div class="container download">
+    <p><a href="{{ url_for('static', filename=download_link.split('static/')[-1]) }}" download>📥 Download Prediction CSV</a></p>
+  </div>
+  {% endif %}
+</body>
+</html>
