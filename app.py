@@ -1,78 +1,54 @@
-from flask import Flask, request, render_template, url_for
-import joblib
+from flask import Flask, request, render_template, jsonify
 import numpy as np
+import joblib
 import pandas as pd
-from datetime import datetime
-import json
-from sklearn.datasets import load_breast_cancer
+import os
 
-# -------------------- Load Artifacts --------------------
-# Load feature names from the original dataset
-data = load_breast_cancer()
-feature_names = data.feature_names
+app = Flask(__name__)
 
-# Load saved model and scaler
+# Load the model and scaler
 model = joblib.load("breast_cancer_model.pkl")
 scaler = joblib.load("scaler.pkl")
 
-# Load evaluation metrics
-with open("model_metrics.json", "r") as f:
-    model_metrics = json.load(f)
-
-# -------------------- Flask App --------------------
-app = Flask(__name__)
-
 @app.route('/')
-def index():
-    # Render the form with no prediction yet
-    return render_template(
-        'index.html',
-        prediction_text=None,
-        metrics=model_metrics,
-        download_link=None
-    )
+def home():
+    return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        # 1. Read inputs
-        values = [float(request.form[str(i)]) for i in range(len(feature_names))]
-
-        # 2. Build DataFrame with the original column names
-        df_input = pd.DataFrame([values], columns=feature_names)
-
-        # 3. Scale using DataFrame (no warnings)
-        scaled = scaler.transform(df_input)
-
-        # 4. Predict
-        pred = model.predict(scaled)[0]
-        result = "Malignant (Cancer)" if pred == 0 else "Benign (No Cancer)"
-
-        # 5. Save CSV and render
-        df_out = df_input.copy()
-        df_out["Prediction"] = result
-        ts = datetime.now().strftime("%Y%m%d%H%M%S")
-        fname = f"prediction_{ts}.csv"
-        df_out.to_csv(f"static/{fname}", index=False)
-
-        return render_template(
-            'index.html',
-            prediction_text=f"Result: {result}",
-            metrics=model_metrics,
-            download_link=url_for('static', filename=fname)
-        )
+        # Get data from request
+        data = request.get_json()
+        
+        # Convert input data to numpy array
+        features = np.array([[
+            data['mean_radius'], data['mean_texture'], data['mean_perimeter'], data['mean_area'],
+            data['mean_smoothness'], data['mean_compactness'], data['mean_concavity'],
+            data['mean_concave_points'], data['mean_symmetry'], data['mean_fractal_dimension'],
+            data['radius_error'], data['texture_error'], data['perimeter_error'], data['area_error'],
+            data['smoothness_error'], data['compactness_error'], data['concavity_error'],
+            data['concave_points_error'], data['symmetry_error'], data['fractal_dimension_error'],
+            data['worst_radius'], data['worst_texture'], data['worst_perimeter'], data['worst_area'],
+            data['worst_smoothness'], data['worst_compactness'], data['worst_concavity'],
+            data['worst_concave_points'], data['worst_symmetry'], data['worst_fractal_dimension']
+        ]])
+        
+        # Scale the features
+        features_scaled = scaler.transform(features)
+        
+        # Make prediction
+        prediction = model.predict(features_scaled)
+        probability = model.predict_proba(features_scaled)
+        
+        return jsonify({
+            "prediction": int(prediction[0]),
+            "probability": float(probability[0][1]),
+            "interpretation": "Malignant" if prediction[0] == 0 else "Benign"
+        })
     except Exception as e:
-        import traceback
-        print(f"Error in /predict: {e}")
-        print(traceback.format_exc())
-        return render_template(
-            'index.html',
-            prediction_text="⚠️ Error: Invalid input. Please ensure all fields are numeric.",
-            metrics=model_metrics,
-            download_link=None
-        )
-
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Debug=True for development, turn off in production
-    app.run(debug=True)
+    # Create static directory if it doesn't exist
+    os.makedirs("static", exist_ok=True)
+    app.run(debug=True, host='127.0.0.1', port=8000)

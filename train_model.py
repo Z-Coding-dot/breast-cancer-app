@@ -22,8 +22,12 @@ from sklearn.metrics import (
 )
 
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+import xgboost as xgb
 
 # ------------------ 1. Load Data ------------------
 data = load_breast_cancer()
@@ -61,7 +65,12 @@ X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, 
 models = {
     "Logistic Regression": LogisticRegression(),
     "Random Forest": RandomForestClassifier(),
-    "SVM": SVC(probability=True)
+    "SVM": SVC(probability=True),
+    "KNN": KNeighborsClassifier(),
+    "Decision Tree": DecisionTreeClassifier(),
+    "Gradient Boosting": GradientBoostingClassifier(),
+    "XGBoost": xgb.XGBClassifier(),
+    "Naive Bayes": GaussianNB()
 }
 
 results = {}
